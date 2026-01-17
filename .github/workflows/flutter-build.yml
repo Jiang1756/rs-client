@@ -46,6 +46,11 @@ env:
   MACOS_P12_BASE64: "${{ secrets.MACOS_P12_BASE64 }}"
   UPLOAD_ARTIFACT: "${{ inputs.upload-artifact }}"
   SIGN_BASE_URL: "${{ secrets.SIGN_BASE_URL }}"   # 移除 -2 后缀，secret 未设置时自动为空
+  # RustDesk 连接信息 (从 Secrets 获取)
+  RENDEZVOUS_SERVER: "${{ secrets.RUSTDESK_ID_SERVER }}"
+  RS_RELAY: "${{ secrets.RUSTDESK_RELAY_SERVER }}"
+  API_SERVER: "${{ secrets.RUSTDESK_API_SERVER }}"
+  RS_PUB_KEY: "${{ secrets.RUSTDESK_PUB_KEY }}"
 
 jobs:
   generate-bridge:
@@ -166,6 +171,11 @@ jobs:
         shell: bash
 
       - name: Build rustdesk
+        env:
+          RENDEZVOUS_SERVER: ${{ env.RENDEZVOUS_SERVER }}
+          RS_RELAY: ${{ env.RS_RELAY }}
+          API_SERVER: ${{ env.API_SERVER }}
+          RS_PUB_KEY: ${{ env.RS_PUB_KEY }}
         run: |
           # Windows: build RustDesk
           python3 .\build.py --portable --hwcodec --flutter --vram --skip-portable-pack
