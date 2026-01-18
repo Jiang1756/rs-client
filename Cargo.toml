@@ -74,8 +74,8 @@ rdev = { git = "https://github.com/rustdesk-org/rdev" }
 url = { version = "2.3", features = ["serde"] }
 crossbeam-queue = "0.3"
 hex = "0.4"
-# 免密连接票据验证依赖
-ed25519-dalek = "2.1"
+# 免密连接票据验证依赖 (注意: 2.2.0 需要 Rust 1.81+, 使用 2.1.1 兼容 1.75)
+ed25519-dalek = "=2.1.1"
 base64 = "0.21"
 chrono = "0.4"
 cidr-utils = "0.5"
