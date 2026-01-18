@@ -74,6 +74,9 @@ rdev = { git = "https://github.com/rustdesk-org/rdev" }
 url = { version = "2.3", features = ["serde"] }
 crossbeam-queue = "0.3"
 hex = "0.4"
+# 免密连接票据验证依赖
+ed25519-dalek = "2.1"
+base64 = "0.21"
 chrono = "0.4"
 cidr-utils = "0.5"
 libloading = "0.8"

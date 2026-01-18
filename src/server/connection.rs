@@ -1909,6 +1909,27 @@ impl Connection {
     }
 
     fn validate_password(&mut self) -> bool {
+        // 优先检查是否为免密连接票据
+        // TODO: 从配置或内置常量获取 API Server 公钥
+        // 此处使用空字符串表示公钥未配置，将跳过票据验证
+        let ticket_public_key = crate::get_builtin_option("ticket-public-key");
+        if !ticket_public_key.is_empty() && crate::ticket::is_ticket(&self.lr.password) {
+            let my_device_id = Config::get_id();
+            if let Some(payload) = crate::ticket::try_verify_ticket(
+                &self.lr.password,
+                &my_device_id,
+                &ticket_public_key,
+            ) {
+                log::info!(
+                    "免密连接票据验证成功: src_id={}, dst_id={}",
+                    payload.src_id,
+                    payload.dst_id
+                );
+                return true;
+            }
+        }
+
+        // 原有密码验证逻辑
         if password::temporary_enabled() {
             let password = password::temporary_password();
             if self.validate_one_password(password.clone()) {
