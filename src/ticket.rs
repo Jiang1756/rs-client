@@ -3,6 +3,7 @@
 //! 该模块实现了对 API Server 签发的免密连接票据的验证逻辑。
 //! 使用 Ed25519 签名算法进行离线验签。
 
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use hbb_common::log;
 use serde::{Deserialize, Serialize};
@@ -86,11 +87,11 @@ impl TicketVerifier {
         let signature_b64 = &content[dot_pos + 1..];
 
         // 解码载荷
-        let payload_bytes = base64::decode_config(payload_b64, base64::URL_SAFE_NO_PAD)
+        let payload_bytes = URL_SAFE_NO_PAD.decode(payload_b64)
             .map_err(|e| format!("解码载荷失败: {}", e))?;
 
         // 解码签名
-        let signature_bytes = base64::decode_config(signature_b64, base64::URL_SAFE_NO_PAD)
+        let signature_bytes = URL_SAFE_NO_PAD.decode(signature_b64)
             .map_err(|e| format!("解码签名失败: {}", e))?;
 
         if signature_bytes.len() != 64 {
