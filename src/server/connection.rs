@@ -1909,29 +1909,35 @@ impl Connection {
     }
 
     fn validate_password(&mut self) -> bool {
-        // ===== 暂时禁用免密连接票据 (排查连接问题) =====
         // 优先检查是否为免密连接票据
-        // TODO: 从配置或内置常量获取 API Server 公钥
-        // 此处使用空字符串表示公钥未配置，将跳过票据验证
-        // let ticket_public_key = crate::get_builtin_option("ticket-public-key");
-        // if !ticket_public_key.is_empty() && crate::ticket::is_ticket(&self.lr.password) {
-        //     let my_device_id = Config::get_id();
-        //     if let Some(payload) = crate::ticket::try_verify_ticket(
-        //         &self.lr.password,
-        //         &my_device_id,
-        //         &ticket_public_key,
-        //     ) {
-        //         log::info!(
-        //             "免密连接票据验证成功: src_id={}, dst_id={}",
-        //             payload.src_id,
-        //             payload.dst_id
-        //         );
-        //         return true;
-        //     }
-        // }
-        // ===== 暂时禁用结束 =====
+        // 票据格式: TICKET:v1:<base64url(payload)>.<base64url(signature)>
+        if crate::ticket::is_ticket(&self.lr.password) {
+            let ticket_public_key = crate::get_builtin_option("ticket-public-key");
+            if !ticket_public_key.is_empty() {
+                let my_device_id = Config::get_id();
+                if let Some(payload) = crate::ticket::try_verify_ticket(
+                    &self.lr.password,
+                    &my_device_id,
+                    &ticket_public_key,
+                ) {
+                    log::info!(
+                        "免密连接票据验证成功: src_id={}, dst_id={}",
+                        payload.src_id,
+                        payload.dst_id
+                    );
+                    return true;
+                } else {
+                    log::warn!("免密连接票据验证失败");
+                    // 票据验证失败，不继续尝试普通密码验证
+                    return false;
+                }
+            } else {
+                log::warn!("收到免密连接票据但未配置 ticket-public-key，拒绝连接");
+                return false;
+            }
+        }
 
-        // 原有密码验证逻辑
+        // 原有密码验证逻辑（非票据情况）
         if password::temporary_enabled() {
             let password = password::temporary_password();
             if self.validate_one_password(password.clone()) {
