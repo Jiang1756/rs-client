@@ -2,9 +2,6 @@ name: Flutter Nightly Build
 run-name: "rustdesk-custom #${{ github.run_number }} by @${{ github.actor }}"
 
 on:
-  schedule:
-    # schedule build every night
-    - cron: "0 0 * * *"
   workflow_dispatch:
     inputs:
       upload-tag:
