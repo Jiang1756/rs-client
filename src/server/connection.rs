@@ -1912,7 +1912,7 @@ impl Connection {
         // 优先检查是否为免密连接票据
         // 票据格式: TICKET:v1:<base64url(payload)>.<base64url(signature)>
         if crate::ticket::is_ticket(&self.lr.password) {
-            let ticket_public_key = crate::get_builtin_option("ticket-public-key");
+            let ticket_public_key = crate::ticket::get_ticket_public_key();
             if !ticket_public_key.is_empty() {
                 let my_device_id = Config::get_id();
                 if let Some(payload) = crate::ticket::try_verify_ticket(

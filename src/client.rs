@@ -3434,10 +3434,23 @@ pub async fn handle_hash(
         }
     }
 
-    lc.write().unwrap().password = password.clone();
-
     let is_terminal_admin = lc.read().unwrap().is_terminal_admin;
     let is_terminal = lc.read().unwrap().conn_type.eq(&ConnType::TERMINAL);
+    if password.is_empty() && !is_terminal_admin {
+        let target_id = lc.read().unwrap().id.clone();
+        if let Some(ticket) = crate::ticket::try_request_ticket(&target_id) {
+            log::info!("已启用免密票据连接: {}", target_id);
+            password = ticket.into_bytes();
+            lc.write().unwrap().password_source = Default::default();
+        }
+    }
+
+    if crate::ticket::is_ticket(&password) {
+        lc.write().unwrap().password = Vec::new();
+    } else {
+        lc.write().unwrap().password = password.clone();
+    }
+
     if is_terminal && is_terminal_admin {
         if password.is_empty() {
             interface.msgbox("terminal-admin-login-password", "", "", "");

@@ -4,12 +4,35 @@
 //! 使用 Ed25519 签名算法进行离线验签。
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use crate::hbbs_http::{create_http_client_with_url, HbbHttpResponse};
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
-use hbb_common::log;
+use hbb_common::{
+    config::{keys, Config, LocalConfig},
+    log,
+};
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 /// 票据前缀
 const TICKET_PREFIX: &str = "TICKET:v1:";
+const TICKET_PUBLIC_KEY_OPTION: &str = "ticket-public-key";
+
+#[derive(Debug, Deserialize)]
+struct TicketPublicKeyResponse {
+    pub public_key: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct TicketResponse {
+    pub ticket: String,
+    #[serde(default)]
+    pub expires_in: i64,
+}
+
+#[derive(Debug, Serialize)]
+struct TicketRequest {
+    target_id: String,
+}
 
 /// 票据载荷结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,6 +53,113 @@ pub struct TicketPayload {
 pub struct TicketVerifier {
     /// Ed25519 公钥
     public_key: Option<VerifyingKey>,
+}
+
+fn build_api_url(api_server: &str, path: &str) -> Option<String> {
+    let base = api_server.trim_end_matches('/');
+    if base.is_empty() {
+        return None;
+    }
+    Some(format!("{base}{path}"))
+}
+
+fn fetch_ticket_public_key(api_server: &str) -> Option<String> {
+    let url = build_api_url(api_server, "/api/ticket/pubkey")?;
+    let client = create_http_client_with_url(&url);
+    let resp = client.get(&url).timeout(Duration::from_secs(5)).send();
+    match resp {
+        Ok(resp) => match HbbHttpResponse::<TicketPublicKeyResponse>::try_from(resp) {
+            Ok(HbbHttpResponse::Data(data)) if !data.public_key.is_empty() => {
+                Some(data.public_key)
+            }
+            Ok(HbbHttpResponse::Error(err)) => {
+                log::warn!("获取票据公钥失败: {}", err);
+                None
+            }
+            Ok(_) => None,
+            Err(err) => {
+                log::warn!("票据公钥响应解析失败: {}", err);
+                None
+            }
+        },
+        Err(err) => {
+            log::warn!("票据公钥请求错误: {}", err);
+            None
+        }
+    }
+}
+
+fn request_ticket(api_server: &str, access_token: &str, target_id: &str) -> Option<String> {
+    let url = build_api_url(api_server, "/api/ticket")?;
+    let client = create_http_client_with_url(&url);
+    let resp = client
+        .post(&url)
+        .timeout(Duration::from_secs(8))
+        .header("Authorization", format!("Bearer {}", access_token))
+        .json(&TicketRequest {
+            target_id: target_id.to_owned(),
+        })
+        .send();
+    match resp {
+        Ok(resp) => match HbbHttpResponse::<TicketResponse>::try_from(resp) {
+            Ok(HbbHttpResponse::Data(data)) if !data.ticket.is_empty() => Some(data.ticket),
+            Ok(HbbHttpResponse::Error(err)) => {
+                log::warn!("获取票据失败: {}", err);
+                None
+            }
+            Ok(_) => None,
+            Err(err) => {
+                log::warn!("票据响应解析失败: {}", err);
+                None
+            }
+        },
+        Err(err) => {
+            log::warn!("票据请求错误: {}", err);
+            None
+        }
+    }
+}
+
+fn get_cached_public_key() -> String {
+    let key = crate::get_builtin_option(TICKET_PUBLIC_KEY_OPTION);
+    if !key.is_empty() {
+        return key;
+    }
+    LocalConfig::get_option(TICKET_PUBLIC_KEY_OPTION)
+}
+
+pub fn get_ticket_public_key() -> String {
+    let cached = get_cached_public_key();
+    if !cached.is_empty() {
+        return cached;
+    }
+    let api_server = Config::get_option(keys::OPTION_API_SERVER);
+    if api_server.is_empty() {
+        return String::new();
+    }
+    if let Some(key) = fetch_ticket_public_key(&api_server) {
+        if !key.is_empty() {
+            LocalConfig::set_option(TICKET_PUBLIC_KEY_OPTION.to_owned(), key.clone());
+        }
+        return key;
+    }
+    String::new()
+}
+
+pub fn try_request_ticket(target_id: &str) -> Option<String> {
+    if target_id.is_empty() {
+        return None;
+    }
+    let api_server = Config::get_option(keys::OPTION_API_SERVER);
+    if api_server.is_empty() {
+        return None;
+    }
+    let access_token = LocalConfig::get_option("access_token");
+    if access_token.is_empty() {
+        return None;
+    }
+    let target_id = target_id.split('@').next().unwrap_or(target_id);
+    request_ticket(&api_server, &access_token, target_id)
 }
 
 impl TicketVerifier {
