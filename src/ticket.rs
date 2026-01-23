@@ -65,11 +65,13 @@ fn build_api_url(api_server: &str, path: &str) -> Option<String> {
 
 fn fetch_ticket_public_key(api_server: &str) -> Option<String> {
     let url = build_api_url(api_server, "/api/ticket/pubkey")?;
+    log::debug!("开始获取票据公钥: {}", url);
     let client = create_http_client_with_url(&url);
     let resp = client.get(&url).timeout(Duration::from_secs(5)).send();
     match resp {
         Ok(resp) => match HbbHttpResponse::<TicketPublicKeyResponse>::try_from(resp) {
             Ok(HbbHttpResponse::Data(data)) if !data.public_key.is_empty() => {
+                log::debug!("获取票据公钥成功: len={}", data.public_key.len());
                 Some(data.public_key)
             }
             Ok(HbbHttpResponse::Error(err)) => {
@@ -91,6 +93,12 @@ fn fetch_ticket_public_key(api_server: &str) -> Option<String> {
 
 fn request_ticket(api_server: &str, access_token: &str, target_id: &str) -> Option<String> {
     let url = build_api_url(api_server, "/api/ticket")?;
+    log::debug!(
+        "开始请求票据: url={} target_id={} token_len={}",
+        url,
+        target_id,
+        access_token.len()
+    );
     let client = create_http_client_with_url(&url);
     let resp = client
         .post(&url)
@@ -102,7 +110,14 @@ fn request_ticket(api_server: &str, access_token: &str, target_id: &str) -> Opti
         .send();
     match resp {
         Ok(resp) => match HbbHttpResponse::<TicketResponse>::try_from(resp) {
-            Ok(HbbHttpResponse::Data(data)) if !data.ticket.is_empty() => Some(data.ticket),
+            Ok(HbbHttpResponse::Data(data)) if !data.ticket.is_empty() => {
+                log::debug!(
+                    "获取票据成功: len={} expires_in={}",
+                    data.ticket.len(),
+                    data.expires_in
+                );
+                Some(data.ticket)
+            }
             Ok(HbbHttpResponse::Error(err)) => {
                 log::warn!("获取票据失败: {}", err);
                 None
@@ -123,6 +138,7 @@ fn request_ticket(api_server: &str, access_token: &str, target_id: &str) -> Opti
 fn get_cached_public_key() -> String {
     let key = crate::get_builtin_option(TICKET_PUBLIC_KEY_OPTION);
     if !key.is_empty() {
+        log::debug!("票据公钥使用内置配置");
         return key;
     }
     LocalConfig::get_option(TICKET_PUBLIC_KEY_OPTION)
@@ -131,16 +147,19 @@ fn get_cached_public_key() -> String {
 pub fn get_ticket_public_key() -> String {
     let cached = get_cached_public_key();
     if !cached.is_empty() {
+        log::debug!("票据公钥使用本地缓存");
         return cached;
     }
     let api_server = Config::get_option(keys::OPTION_API_SERVER);
     if api_server.is_empty() {
+        log::debug!("票据公钥获取跳过: 未配置 api-server");
         return String::new();
     }
     if let Some(key) = fetch_ticket_public_key(&api_server) {
         if !key.is_empty() {
             LocalConfig::set_option(TICKET_PUBLIC_KEY_OPTION.to_owned(), key.clone());
         }
+        log::debug!("票据公钥从 API 获取完成");
         return key;
     }
     String::new()
@@ -148,17 +167,21 @@ pub fn get_ticket_public_key() -> String {
 
 pub fn try_request_ticket(target_id: &str) -> Option<String> {
     if target_id.is_empty() {
+        log::debug!("票据请求跳过: target_id 为空");
         return None;
     }
     let api_server = Config::get_option(keys::OPTION_API_SERVER);
     if api_server.is_empty() {
+        log::debug!("票据请求跳过: 未配置 api-server");
         return None;
     }
     let access_token = LocalConfig::get_option("access_token");
     if access_token.is_empty() {
+        log::debug!("票据请求跳过: access_token 为空");
         return None;
     }
     let target_id = target_id.split('@').next().unwrap_or(target_id);
+    log::debug!("票据请求准备完成: target_id={}", target_id);
     request_ticket(&api_server, &access_token, target_id)
 }
 
