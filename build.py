@@ -412,6 +412,14 @@ def build_flutter_dmg(version, features):
     os.chdir('flutter')
     system2('flutter build macos --release')
     system2('cp -rf ../target/release/service ./build/macos/Build/Products/Release/RustDesk.app/Contents/MacOS/')
+    # Remove all code signatures to allow installation without signing
+    # This enables the app to run on macOS without a valid Apple Developer certificate
+    print('Removing code signatures for unsigned distribution...')
+    os.system('codesign --remove-signature --deep ./build/macos/Build/Products/Release/RustDesk.app 2>/dev/null || true')
+    # Also remove signatures from individual binaries
+    os.system('find ./build/macos/Build/Products/Release/RustDesk.app -type f \\( -name "*.dylib" -o -name "rustdesk" -o -name "service" \\) -exec codesign --remove-signature {} \\; 2>/dev/null || true')
+    # Remove extended attributes that may cause Gatekeeper issues
+    os.system('xattr -cr ./build/macos/Build/Products/Release/RustDesk.app 2>/dev/null || true')
     '''
     system2(
         "create-dmg --volname \"RustDesk Installer\" --window-pos 200 120 --window-size 800 400 --icon-size 100 --app-drop-link 600 185 --icon RustDesk.app 200 190 --hide-extension RustDesk.app rustdesk.dmg ./build/macos/Build/Products/Release/RustDesk.app")

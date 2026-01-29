@@ -27,7 +27,7 @@
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
 		7ED2B35F2BB007420099885C /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 7ED2B35E2BB007420099885C /* AppIcon.icns */; };
 		84010BA8292CF66600152837 /* liblibrustdesk.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 84010BA7292CF66600152837 /* liblibrustdesk.dylib */; settings = {ATTRIBUTES = (Weak, ); }; };
-		84010BA9292CF68300152837 /* liblibrustdesk.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 84010BA7292CF66600152837 /* liblibrustdesk.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		84010BA9292CF68300152837 /* liblibrustdesk.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 84010BA7292CF66600152837 /* liblibrustdesk.dylib */; };
 		C5E54335B73C89F72DB1B606 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26C84465887F29AE938039CB /* Pods_Runner.framework */; };
 /* End PBXBuildFile section */
 
@@ -433,7 +433,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = HZF9JMC8YN;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = Runner/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -579,7 +579,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = HZF9JMC8YN;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = Runner/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -609,7 +609,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = HZF9JMC8YN;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = Runner/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
