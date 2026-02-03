@@ -409,6 +409,11 @@ def build_flutter_dmg(version, features):
     # copy dylib
     system2(
         "cp target/release/liblibrustdesk.dylib target/release/librustdesk.dylib")
+    # Ad-hoc sign the dylib to satisfy Xcode 16+ code signing requirements
+    # This is required because Xcode now validates signatures on embedded libraries during build
+    print('Ad-hoc signing liblibrustdesk.dylib for Xcode compatibility...')
+    os.system('codesign --force --sign - target/release/liblibrustdesk.dylib')
+    os.system('codesign --force --sign - target/release/librustdesk.dylib')
     os.chdir('flutter')
     system2('flutter build macos --release')
     system2('cp -rf ../target/release/service ./build/macos/Build/Products/Release/RustDesk.app/Contents/MacOS/')
