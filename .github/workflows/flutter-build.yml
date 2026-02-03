@@ -740,13 +740,21 @@ jobs:
       - name: create unsigned dmg
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
-          # Remove all code signatures for unsigned distribution
-          echo "Removing code signatures for unsigned distribution..."
-          codesign --remove-signature --deep ./flutter/build/macos/Build/Products/Release/RustDesk.app 2>/dev/null || true
-          find ./flutter/build/macos/Build/Products/Release/RustDesk.app -type f \( -name "*.dylib" -o -name "rustdesk" -o -name "service" \) -exec codesign --remove-signature {} \; 2>/dev/null || true
-          # Remove extended attributes that may cause Gatekeeper issues
+          # 处理 App 签名：ARM 需要 ad-hoc 签名，x86_64 移除签名
+          echo "Processing code signatures for ${{ matrix.job.arch }} distribution..."
+          if [ "${{ matrix.job.arch }}" = "aarch64" ]; then
+            # ARM Mac 强制要求所有可执行文件必须有签名，使用 ad-hoc 签名
+            echo "ARM architecture detected: applying ad-hoc signature..."
+            codesign --force --deep --sign - ./flutter/build/macos/Build/Products/Release/RustDesk.app
+          else
+            # x86_64 可以运行无签名的应用
+            echo "x86_64 architecture detected: removing signatures..."
+            codesign --remove-signature --deep ./flutter/build/macos/Build/Products/Release/RustDesk.app 2>/dev/null || true
+            find ./flutter/build/macos/Build/Products/Release/RustDesk.app -type f \( -name "*.dylib" -o -name "rustdesk" -o -name "service" \) -exec codesign --remove-signature {} \; 2>/dev/null || true
+          fi
+          # 移除扩展属性（避免 Gatekeeper 隔离问题）
           xattr -cr ./flutter/build/macos/Build/Products/Release/RustDesk.app 2>/dev/null || true
-          # Create unsigned DMG
+          # 创建 DMG
           CREATE_DMG="$(command -v create-dmg)"
           CREATE_DMG="$(readlink -f "$CREATE_DMG")"
           sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG"
