@@ -803,6 +803,7 @@ jobs:
             rustdesk*-${{ matrix.job.arch }}.dmg
 
   publish_unsigned:
+    if: false  # 禁用：各平台产物已单独发布
     needs:
       - build-for-macOS
       - build-for-windows-flutter
